@@ -2,18 +2,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import relationship, sessionmaker, mapper
 from config import ENGINE
 import datetime
-from database import User, Model
+from database import User, Model, load_session
 from sqlalchemy.orm.exc import NoResultFound
 import sqlite3
 
 
 engine = create_engine(ENGINE, echo=True)
-
-
-def load_session(engine):
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    return session
 
 
 def add_sample_data():

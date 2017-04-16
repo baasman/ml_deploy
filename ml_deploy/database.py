@@ -3,12 +3,22 @@ from sqlalchemy import PickleType, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import relationship, sessionmaker
-from config import ENGINE
+from config import ENGINE, SECRET_KEY
 from passlib.apps import custom_app_context as pwd_context
+from itsdangerous import (TimedJSONWebSignatureSerializer
+                          as Serializer, BadSignature, SignatureExpired)
 
 engine = create_engine(ENGINE, echo=True)
 
 Base = declarative_base(engine)
+
+def load_session(engine):
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    return session
+
+
+session = load_session(engine)
 
 
 class User(Base):
@@ -27,6 +37,22 @@ class User(Base):
 
     def verify_password(self, password):
         return pwd_context.verify(password, self.password_hash)
+
+    def generate_auth_token(self, expiration=1000):
+        s = Serializer(SECRET_KEY, expires_in=expiration)
+        return s.dumps({'id': self.id})
+
+    @staticmethod
+    def verify_auth_token(token):
+        s = Serializer(SECRET_KEY)
+        try:
+            data = s.loads(token)
+        except SignatureExpired:
+            return None
+        except BadSignature:
+            return None
+        user = session.query(User).filter_by(id=data['id'])
+        return user
 
 
 class Model(Base):
