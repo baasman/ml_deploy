@@ -4,4 +4,5 @@
 *.ini
 *.pyc
 *.sublime-project
+*.sublime-workspace
 *.db
