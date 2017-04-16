@@ -1,1 +1,3 @@
-ml_deploy/__pychache__/
+ml_deploy/__pychache__/*
+ml_deploy/test_data/*
+config.ini
