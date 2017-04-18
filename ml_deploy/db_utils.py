@@ -2,12 +2,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import relationship, sessionmaker, mapper
 from config import ENGINE
 import datetime
-from database import User, Model, load_session
-from sqlalchemy.orm.exc import NoResultFound
+from database import User, Model, load_session, session
 import sqlite3
 
 
 engine = create_engine(ENGINE, echo=True)
+
+def get_user(username):
+    return session.query(User).filter_by(username=username).first()
 
 
 def add_sample_data():
@@ -19,9 +21,10 @@ def add_sample_data():
     X, y = iris.data, iris.target
     clf.fit(X, y)
     s = load_session(engine)
-    u = User(username='pippa')
-    u.hash_password('nerd')
-    mod = Model(user=u, model_name='testsvm2', model=pickle.dumps(clf))
+    u = User(username='leah3')
+    u.hash_password('ginsky')
+    mod = Model(user=u, model_name='testmod', model=pickle.dumps(clf),
+                date_added=datetime.datetime.now(), model_source='sklearn')
     s.add(u)
     s.add(mod)
     s.commit()
