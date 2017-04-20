@@ -5,7 +5,9 @@ from sqlalchemy.orm import exc as orm_exc
 from flask_httpauth import HTTPBasicAuth
 from config import VERSION, PORT, HOST
 from db_utils import get_user
+from utils import read_data
 import pickle
+import json
 
 auth = HTTPBasicAuth()
 
@@ -80,14 +82,11 @@ class CreateUser(Resource):
             print(str(e))
             return print('Unable to register user: %s' % username)
         return jsonify({'Username': username}, 201, 
-                       {'Location': 'http://localhost:8005/user/%s' % username})
-
+                       # {'Location': 'http://localhost:8005/user/%s' % username})
+                        {url_for(_User, username)})
 
 class _Model(Resource):
     def get(self, username, model_name):
-        # result = session.query(User).join(Model).\
-        #              filter(User.username==username).\
-        #              filter(Model.model_name==model_name).all()
         result = session.query(Model).join(User).\
                          filter(User.username==username).all()
         if len(result) > 1:
@@ -110,6 +109,39 @@ class _Model(Resource):
                         'model_attributes': model_attributes})
 
 
+class BatchPredict(Resource):
+    def get(self, username, model_name):
+        parser = reqparse.RequestParser()
+        parser.add_argument('file', type=str, help='Filepath to data')
+        parser.add_argument('skipheader', type=bool, help='Should header be skipped?')
+        parser.add_argument('delimiter', type=str, help='What delimiter is used in data?')
+
+        args = parser.parse_args()
+        
+        file = args['file']
+        skipheader = args['skipheader']
+        delimiter = args['delimiter']
+
+        model = session.query(Model).join(User).\
+                         filter(User.username==username).first()
+        try:
+            model = pickle.loads(model.model)
+        except Exception as e:
+            print(str(e))
+            abort(404)
+
+        try:
+            data = read_data(file, skipheader, delimiter)
+        except Exception as e:
+            print(str(e))
+
+        predictions = model.predict(data).tolist()
+        predictions = json.dumps(preds)
+
+        return {'model': model.get_params(), 'file': file,
+                'predictions': predictions}
+
+
 class Home(Resource):
     def get(self):
         return 'Welcome!. Have fun deploying your models!', 200
@@ -128,6 +160,7 @@ api.add_resource(_User, '/user/<string:username>')
 api.add_resource(CreateUser, '/account')
 api.add_resource(Authentication, '/token/<string:username>')
 api.add_resource(_Model, '/user/<string:username>/model/<string:model_name>')
+api.add_resource(BatchPredict, '/user/<string:username>/model/<string:model_name>/batch_predict')
 
 
 if __name__ == '__main__':
