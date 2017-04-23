@@ -12,6 +12,7 @@ engine = create_engine(ENGINE, echo=True)
 
 Base = declarative_base(engine)
 
+
 def load_session(engine):
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -28,6 +29,7 @@ class User(Base):
     username = Column(String(32), unique=True, nullable=False)
     password_hash = Column(String(128))
     models = relationship('Model', back_populates='user')
+    projects = relationship('Project', back_populates='user')
 
     def __repr__(self):
         return '<User(username:%s)>' % (self.username)
@@ -44,9 +46,9 @@ class User(Base):
 
     @staticmethod
     def verify_auth_token(token):
-        s = Serializer(SECRET_KEY)
+        _s = Serializer(SECRET_KEY)
         try:
-            data = s.loads(token)
+            data = _s.loads(token)
         except SignatureExpired:
             return None
         except BadSignature:
@@ -60,16 +62,31 @@ class Model(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id'))
+    project_id = Column(Integer, ForeignKey('project.id'))
     model_name = Column(String, nullable=False)
     model_source = Column(String, nullable=True)
     model = Column(PickleType, nullable=False)
     date_added = Column(DateTime, nullable=True)
     user = relationship('User', back_populates='models')
+    project = relationship('Project', back_populates='models')
 
     def __repr__(self):
         return '<Model(model_name:%s, model_source:%s, date_added:%s' % (self.model_name, self.model_source, self.date_added)
 
 
-Base.metadata.create_all(engine)
+class Project(Base):
+    __tablename__ = 'project'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    project_name = Column(String, nullable=False)
+    date_added = Column(DateTime, nullable=True)
+    models = relationship('Model', back_populates='project')
+    user = relationship('User', back_populates='projects')
+
+    def __repr__(self):
+        return '<Project(project_name: %s, date_added: %s)>' % (self.project_name, self.date_added) # noqa
 
 
+if __name__ == '__main__':
+    Base.metadata.create_all(engine)

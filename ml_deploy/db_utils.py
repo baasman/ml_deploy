@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import relationship, sessionmaker, mapper
 from config import ENGINE
 import datetime
-from database import User, Model, load_session, session
+from database import User, Model, Project, load_session, session
 import sqlite3
 
 
@@ -21,12 +21,20 @@ def add_sample_data():
     X, y = iris.data, iris.target
     clf.fit(X, y)
     s = load_session(engine)
-    u = User(username='leah3')
-    u.hash_password('ginsky')
+    u = User(username='boudey')
+    print(u)
+    u.hash_password('thebest')
+    project = Project(project_name='testProject', date_added=datetime.datetime.now(),
+                      user=u)
+    print(u.projects)
     mod = Model(user=u, model_name='testmod', model=pickle.dumps(clf),
-                date_added=datetime.datetime.now(), model_source='sklearn')
+                date_added=datetime.datetime.now(), model_source='sklearn',
+                project=project)
+    # print(mod)
+    # print(mod.project)
     s.add(u)
     s.add(mod)
+    s.add(project)
     s.commit()
 
 
