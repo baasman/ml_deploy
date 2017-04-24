@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship, sessionmaker, mapper
 from config import ENGINE
 import datetime
 from database import User, Model, Project, load_session, session
+from database import User_Project
 import sqlite3
 
 
@@ -21,21 +22,33 @@ def add_sample_data():
     X, y = iris.data, iris.target
     clf.fit(X, y)
     s = load_session(engine)
-    u = User(username='boudey')
-    print(u)
-    u.hash_password('thebest')
-    project = Project(project_name='testProject', date_added=datetime.datetime.now(),
-                      user=u)
-    print(u.projects)
-    mod = Model(user=u, model_name='testmod', model=pickle.dumps(clf),
+    u1 = User(username='boudey')
+    u1.hash_password('thebest')
+    u2 = User(username='boudey2')
+    u2.hash_password('thebest2')
+    
+    print(u1, u2)
+    project1 = Project(project_name='testProject', date_added=datetime.datetime.now())
+    project2 = Project(project_name='testProject2', date_added=datetime.datetime.now())
+    print(project1, project2)
+    session.add_all([project1, project2])
+
+    project1.add_users([u1, u2])
+    project2.add_users([u1])
+
+    mod = Model(model_name='testmod', model=pickle.dumps(clf),
                 date_added=datetime.datetime.now(), model_source='sklearn',
-                project=project)
-    # print(mod)
-    # print(mod.project)
-    s.add(u)
-    s.add(mod)
-    s.add(project)
-    s.commit()
+                project=project1)
+    print(mod)
+    session.add(mod)
+
+    session.commit()
+    # # print(mod)
+    # # print(mod.project)
+    # s.add(u)
+    # s.add(mod)
+    # s.add(project)
+    # s.commit()
 
 
 if __name__ == '__main__':
