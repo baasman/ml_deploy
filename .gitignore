@@ -6,3 +6,8 @@
 *.sublime-project
 *.sublime-workspace
 *.db
+.idea/
+.vscode/
+ml_deploy/__pycache__/
+ml_deploy/resources/__pycache__/
+ml_deploy/resources/common/__pycache__/

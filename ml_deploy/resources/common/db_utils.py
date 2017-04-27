@@ -1,16 +1,19 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import relationship, sessionmaker, mapper
-from config import ENGINE
+from ml_deploy.config import ENGINE
 import datetime
-from database import User, Model, Project, load_session, session
-from database import User_Project
-import sqlite3
-
+from ml_deploy.resources.common.database import User, Model, Project, load_session, session
+from ml_deploy.resources.common.database import User_Project
+from ml_deploy.config import ENGINE
 
 engine = create_engine(ENGINE, echo=True)
 
 def get_user(username):
     return session.query(User).filter_by(username=username).first()
+
+def get_all_usernames():
+    names = session.query(User.username).all()
+    return [i[0] for i in names]
 
 
 def add_sample_data():
@@ -52,5 +55,6 @@ def add_sample_data():
 
 
 if __name__ == '__main__':
-    add_sample_data()
-
+    # add_sample_data()
+    n = get_all_usernames()
+    print(n)

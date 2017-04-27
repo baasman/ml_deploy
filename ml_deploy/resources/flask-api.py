@@ -1,5 +1,6 @@
 import json
 import pickle
+import datetime
 
 from flask import Flask, abort, jsonify, request, url_for
 from flask_httpauth import HTTPBasicAuth
@@ -9,7 +10,7 @@ from sqlalchemy.orm import exc as orm_exc
 from utils import read_data
 from config import HOST, PORT, VERSION
 from database import Model, User, Project, engine, load_session, session
-from db_utils import get_user
+from db_utils import get_user, get_all_usernames
 
 auth = HTTPBasicAuth()
 
@@ -187,38 +188,66 @@ class BatchPredict(Resource):
 
 class _Project(Resource):
     '''Handles projects'''
-    def get(self, username, project_name):
+    def get(self, project_name):
         '''
         Attributes:
-        username    Username
         project     Project name
         '''
-        user = get_user(username)
-        projects = user.projects
+        # project = session.query(Project).filter(Project.project_name==project_name)
+        # users = project.users
         # projects = session.query(Project).get(user.id)
-        print(projects)
-        for i in projects:
-            print(i.project_name)
+        # print(projects)
+        # models_per_project = {}
+        # for i in projects:
+        #     models_per_project[i.project_name] = [[str(i.model_name) for i in project.models]]
         # print(project.models)
         return jsonify({'project': {'hmm': 'hello'},
                         'date_added': 'ayo',
-                        'user': username})
+                        'users': 'hello'})
 
-    def post(self, username):
-        pass
-        
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('project_name', type=str,
+                            required=True, help='Name of project')
+        parser.add_argument('users', type=str, action='append')
+        args = parser.parse_args()
+
+        project_name = args['project_name']
+        all_users = args['users']
+
+        project = Project(project_name=project_name,
+                          date_added=datetime.datetime.now())
+        session.add(project)
+
+        all_names = get_all_usernames()
+        user_objects = []
+        for name in all_users:
+            if name in all_names:
+                user_objects.append(get_user(name))
+            else:
+                abort(404, {'message': 'Username %s does not exist' % name})
+        project.add_users(user_objects)
+
+        try:
+            session.commit()
+        except Exception as project_exception:
+            session.rollback()
+            abort(404, {'message': str(project_exception)})
+
+        return jsonify({'project': 'http://%s:%s/project/%s' % (HOST, PORT, project_name),
+                        'users': all_users})
 
 
 class Home(Resource):
     def get(self):
-        return 'Welcome!. Have fun deploying your models!', 200
+        return 'Welcome!. Have fun deploying your models!'
 
 
 class About(Resource):
     def get(self):
         return {'creator': 'Boudewijn Aasman',
                 'email': 'boudeyz@gmail.com',
-                'github': 'https://github.com/baasman/ml_deploy'}, 200
+                'github': 'https://github.com/baasman/ml_deploy'}
 
 
 api.add_resource(Home, '/', '/home')
@@ -228,7 +257,8 @@ api.add_resource(CreateUser, '/account')
 api.add_resource(Authentication, '/token/<string:username>')
 api.add_resource(_Model, '/user/<string:username>/model/<string:model_name>')
 api.add_resource(BatchPredict, '/user/<string:username>/model/<string:model_name>/batch_predict')
-api.add_resource(_Project, '/user/<string:username>/project/<string:project_name>')
+api.add_resource(_Project, '/project', endpoint='create_project')
+api.add_resource(_Project, '/project/<string:project_name>', endpoint='project')
 
 
 if __name__ == '__main__':

@@ -2,12 +2,12 @@ from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
 from sqlalchemy import PickleType, DateTime, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, backref
-from config import ENGINE, SECRET_KEY
+from ml_deploy import config
 from passlib.apps import custom_app_context as pwd_context
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
 
-engine = create_engine(ENGINE, echo=True)
+engine = create_engine(config.ENGINE, echo=True)
 
 Base = declarative_base(engine)
 
@@ -44,7 +44,6 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(32), unique=True, nullable=False)
     password_hash = Column(String(128))
-    # models = relationship('Model', back_populates='user')
     projects = relationship('Project', secondary='user_project', viewonly=True)
 
     def __init__(self, username):
@@ -81,7 +80,7 @@ class Project(Base):
     __tablename__ = 'project'
 
     id = Column(Integer, primary_key=True)
-    project_name = Column(String, nullable=False)
+    project_name = Column(String, nullable=False, unique=True)
     date_added = Column(DateTime, nullable=True)
     models = relationship('Model', back_populates='project')
     users = relationship('User', secondary='user_project', viewonly=True)
@@ -103,13 +102,11 @@ class Model(Base):
     __tablename__ = 'model'
 
     id = Column(Integer, primary_key=True)
-    # user_id = Column(Integer, ForeignKey('user.id'))
     project_id = Column(Integer, ForeignKey('project.id'))
     model_name = Column(String, nullable=False)
     model_source = Column(String, nullable=True)
     model = Column(PickleType, nullable=False)
     date_added = Column(DateTime, nullable=True)
-    # user = relationship('User', back_populates='models')
     project = relationship('Project', back_populates='models')
 
     def __repr__(self):
